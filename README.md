@@ -111,7 +111,7 @@ The option **“Send the update to Crossref right away”** (on by default) is s
 
 **From a release (recommended)**
 
-1. Download `indexingReadiness-<version>.tar.gz` from [Releases](../../releases).
+1. Open the [latest release](../../releases/latest) and download **Source code (tar.gz)**. OJS 3.5 finds `version.xml` inside the archive and installs the plugin into `plugins/generic/indexingReadiness` regardless of the archive folder name.
 2. In OJS: **Settings → Website → Plugins → Upload A New Plugin** and select the archive.
 3. Enable **Indexing Readiness** among the generic plugins.
 4. Open **Settings → Distribution → Indexing readiness**.
