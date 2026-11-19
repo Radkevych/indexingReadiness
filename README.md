@@ -52,6 +52,8 @@ An article can be perfectly visible in Google Scholar and still reach Crossref w
 
 **Crossref record.** Whether the DOI exists in Crossref and whether the abstract, references, ORCID iDs, affiliations, licence and full-text link actually reached it.
 
+**Saved ROR IDs.** If the ROR record of an affiliation does not match the organisation name entered for the author, the article gets the problem *The ROR ID does not match the organisation name* with a recommendation to restore the save or remove the ROR ID.
+
 **Article page and OAI-PMH.** HTTP status, `noindex`, the `citation_title`, `citation_author`, `citation_pdf_url` and `citation_doi` tags, `robots.txt` rules, the OAI-PMH `Identify` response.
 
 **PDF file.** Text layer (scanned pages), file size over 5 MB, a whole issue in one file, the article title on the first page.
@@ -68,6 +70,15 @@ The tab is organised as three steps.
 
 ![Data found for empty fields, with source and reliability](docs/screenshots/found-data-uk.png)
 
+### Working with selected articles
+
+Each article row has a checkbox, and the header checkbox selects all articles currently shown. The filter list (*All articles*, *With critical problems*, *Not ready*, *Ready*, *With licence problems*, *Without references*, *With found data*, *Selected*) helps to pick the right group first — for example, all articles without references.
+
+For the selected articles you can:
+
+- **Find data for selected** — the same search as step 2, limited to these articles;
+- **Find and save without review** — after one confirmation, the plugin searches and saves all values of medium and high reliability into empty fields. Low-reliability values are never saved this way. Every save goes to the change history and can be restored.
+
 ## Where the data comes from
 
 The plugin **does not invent data**. It takes only what is printed in the article, recorded in the ORCID or ROR registry, or set in the journal settings. If a value is not available anywhere, the field stays empty and is reported as a problem.
@@ -75,13 +86,13 @@ The plugin **does not invent data**. It takes only what is printed in the articl
 | Field | Source |
 |---|---|
 | Title, abstract, keywords (English and Ukrainian) | Article PDF; structured abstracts keep their paragraphs |
-| References | Article PDF; if the article has two lists (for example, the original list and a transliterated *References*), you choose which one to use; one reference per line |
+| References | First the article's own Crossref record (deposited by the journal), then the article PDF. If several lists are available (Crossref, the original list, a transliterated *References*), you choose which one to use; one reference per line. Fragments that do not look like a reference — the beginning of the next article in the same PDF (UDC code, title, author details) or pieces without a year and without a link — are rejected and listed separately for review |
 | Pages | Article PDF: the imprint line (“pp. 135–144”) and the page numbers in running heads or footers |
 | ORCID iD | Article PDF, only if the name in the ORCID record matches the author |
 | Author's email | Article PDF (author information) |
 | Affiliation | Article PDF (author information), only when the author has no affiliation in OJS. The organisation name is taken only when it is printed as a separate item; a fragment such as “Senior Researcher of the Department of … of the Institute …” is skipped, because changing its grammatical form would mean altering the text |
 | Name in English | ORCID record or the English part of the article; **no transliteration** |
-| ROR ID | ROR registry: only the match chosen by ROR itself and only if the organisation exists in the local ROR registry of OJS |
+| ROR ID | ROR registry, only if one of the organisation's names in ROR (official name, variant, acronym or translation) matches the affiliation word for word in its distinctive part — for example, *Vocational* must not become *Higher* or *Emergency*. The *chosen* flag of the ROR service alone is not trusted. The organisation must also exist in the local ROR registry of OJS |
 | Article licence | Default licence of the journal |
 
 Each proposal is shown with its source and reliability. Low-reliability proposals — for example, a title set in capitals in the PDF, whose letter case is restored from the article text — are **not ticked** by default.
@@ -169,6 +180,8 @@ templates/report.tpl            report page
 ```
 
 ## Changelog
+
+**2.3.0** — filters *With licence problems*, *Without references* and *Selected*; selection of articles with *Find data for selected* and *Find and save without review*; references from the article's Crossref record; rejection of non-reference fragments (the next article's UDC code, title, author details); stricter ROR matching by distinctive words and a check of already saved ROR IDs.
 
 **2.2.1** — more accurate restoring of letter case in titles; keyword lists that continue on the next line are read completely.
 

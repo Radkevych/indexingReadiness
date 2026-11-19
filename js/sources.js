@@ -142,6 +142,57 @@
 	var rorCache = {};
 
 	/** Найкращий збіг ROR для назви установи: { id, name, score } або null. */
+	// Службові слова, що не розрізняють установи.
+	var ORG_STOP = { of: 1, the: 1, and: 1, for: 1, at: 1, in: 1, named: 1, after: 1, 'і': 1, 'й': 1, 'та': 1, 'в': 1, 'у': 1, 'імені': 1, 'ім': 1 };
+
+	function orgTokens(text) {
+		return String(text || '').toLowerCase().replace(/[«»"“”'’().,;:–—-]+/g, ' ').split(/\s+/)
+			.filter(function (t) { return t && !ORG_STOP[t]; });
+	}
+
+	/**
+	 * Наскільки дві назви установи збігаються за значущими словами:
+	 * { a: частка слів першої назви, знайдених у другій; b: навпаки }.
+	 */
+	IR.orgSimilarity = function (x, y) {
+		var A = orgTokens(x), B = orgTokens(y);
+		if (!A.length || !B.length) { return { a: 0, b: 0 }; }
+		var inB = A.filter(function (t) { return B.indexOf(t) !== -1; }).length;
+		var inA = B.filter(function (t) { return A.indexOf(t) !== -1; }).length;
+		return { a: inB / A.length, b: inA / B.length };
+	};
+
+	// Загальні слова в назвах установ: вони не відрізняють одну установу від іншої.
+	var ORG_GENERIC = ('institute institution university academy national state ukraine ukrainian education educational science sciences '
+		+ 'research centre center college school naes nas napn nasu ministry '
+		+ 'інститут університет академія академії національний національна національної державний державна державного '
+		+ 'україни український українська освіти наук науковий центр напн нан міністерство').split(' ');
+
+	function isGeneric(t) { return ORG_GENERIC.indexOf(t) !== -1; }
+
+	function orgMatches(affiliation, names) {
+		var A = orgTokens(affiliation), best = null;
+		names.forEach(function (n) {
+			var B = orgTokens(n), s = IR.orgSimilarity(affiliation, n);
+			// Усі розрізнювальні слова (напр. «vocational», «pedagogy», «Shevchenko») мають збігатися в обох назвах.
+			var distinctOk = A.filter(function (t) { return !isGeneric(t); }).every(function (t) { return B.indexOf(t) !== -1; })
+				&& B.filter(function (t) { return !isGeneric(t); }).every(function (t) { return A.indexOf(t) !== -1; });
+			var hasDistinct = A.concat(B).some(function (t) { return !isGeneric(t); });
+			var ok = distinctOk && (hasDistinct ? (s.a >= 0.8 && s.b >= 0.6) : (s.a === 1 && s.b === 1));
+			if (ok && (!best || s.a + s.b > best.a + best.b)) { best = { a: s.a, b: s.b, name: n }; }
+		});
+		return best;
+	}
+	IR.orgMatches = orgMatches;
+
+	var rorCache = {};
+
+	/**
+	 * Ідентифікатор ROR для назви установи. Позначка «chosen» сервісу ROR сама по собі
+	 * не є достатньою (вона буває хибною), тому запис приймається лише тоді, коли одна
+	 * з його назв (основна, варіант, абревіатура чи переклад) збігається з назвою
+	 * установи за значущими словами. Інакше — null.
+	 */
 	IR.rorMatch = function (affiliationName) {
 		var key = String(affiliationName || '').trim();
 		if (!key) { return Promise.resolve(null); }
@@ -149,12 +200,17 @@
 		rorCache[key] = fetch('https://api.ror.org/v2/organizations?affiliation=' + encodeURIComponent(key), { credentials: 'omit' })
 			.then(function (res) { return res.ok ? res.json() : null; })
 			.then(function (j) {
-				var items = (j && j.items) || [];
-				var chosen = items.filter(function (it) { return it.chosen; })[0];
-				if (!chosen) { return null; }
-				var org = chosen.organization || {};
-				var display = (org.names || []).filter(function (n) { return (n.types || []).indexOf('ror_display') !== -1; })[0];
-				return { id: org.id, name: display ? display.value : ((org.names || [])[0] || {}).value || org.id, score: chosen.score };
+				var result = null;
+				((j && j.items) || []).forEach(function (it) {
+					var org = it.organization || {};
+					var names = (org.names || []).map(function (n) { return n.value; });
+					var m = orgMatches(key, names);
+					if (m && (!result || m.a + m.b > result.sim)) {
+						var display = (org.names || []).filter(function (n) { return (n.types || []).indexOf('ror_display') !== -1; })[0];
+						result = { id: org.id, name: display ? display.value : names[0], matchedName: m.name, sim: m.a + m.b, exact: m.a === 1 && m.b === 1 };
+					}
+				});
+				return result;
 			})
 			.catch(function () { return null; });
 		return rorCache[key];
@@ -324,6 +380,9 @@
 		numbered: /^\s*\[?(\d{1,3})[\].)]\s+/,
 		absSection: /^(background|relevance|purpose|aims?|objectives?|methods?|methodology|results?|findings|conclusions?|originality|актуальність|мета|метою|методи|методологія|результати|висновки|перспективи)(?!\p{L})\s*[.:]/iu,
 		authorStart: /^\p{Lu}[\p{L}'’-]+,?\s+(?:\p{Lu}\p{Ll}?\.\s?){1,3}/u,
+		nextArticle: /^(удк|udc|udk)(?![\p{L}])|^issn(?![\p{L}])/iu,
+		udcInside: /(?:^|\s)(удк|udc|udk)\s*\d/iu,
+		bio: /(доктор|кандидат)\s+\S+\s+наук|doctor of|candidate of|ph\.?\s?d\.? in|кафедри|відділу|department of|senior researcher|науковий співробітник|докторант|аспірант/iu,
 		langMark: /\[(in [A-Za-z]+|англ[^\]]*|укр[^\]]*|рос[^\]]*)\]\.?$/i,
 		orcid: /(?:orcid\.org\/)?(\d{4}-\d{4}-\d{4}-\d{3}[\dX])/gi
 	};
@@ -544,6 +603,37 @@
 		return items;
 	}
 
+	/**
+	 * Відбір бібліографічних описів. Відкидаються фрагменти, що не схожі на опис:
+	 * початок наступної статті (УДК, назва, відомості про автора) і уривки без року
+	 * та без адреси. Якщо в описі трапляється «УДК», текст після нього відкидається.
+	 */
+	function checkReferences(list) {
+		var items = [], rejected = [], stopped = false;
+		list.forEach(function (text) {
+			// Після початку наступної статті нічого не беремо.
+			if (stopped) { rejected.push(text); return; }
+			var cut = text.search(RE.udcInside);
+			if (cut >= 0) { stopped = true; }
+			if (cut > 0) {
+				rejected.push(text.slice(cut).trim());
+				text = text.slice(0, cut).trim();
+			} else if (cut === 0) {
+				rejected.push(text);
+				return;
+			}
+			var hasYear = /(^|[^\d])(1[89]\d{2}|20\d{2})([^\d]|$)/.test(text);
+			var hasLink = /(https?:\/\/|doi\.org|www\.)/i.test(text);
+			var looksBio = RE.bio.test(text);
+			if (text.length < 25 || (!hasYear && !hasLink) || (looksBio && !hasYear)) {
+				rejected.push(text);
+			} else {
+				items.push(text);
+			}
+		});
+		return { items: items, rejected: rejected };
+	}
+
 	function findReferenceLists(L, big) {
 		var lists = [];
 		for (var i = 0; i < L.length; i++) {
@@ -552,13 +642,14 @@
 			var body = [];
 			for (var j = i + 1; j < L.length; j++) {
 				var t = L[j].text;
-				if (RE.refEnd.test(t) || (RE.refHeading.test(t) && t.length <= 70) || anyAbstractHeading(t) || L[j].h >= big) { break; }
+				// Кінець списку: службові розділи, наступна стаття (УДК, назва), анотація іншою мовою.
+				if (RE.refEnd.test(t) || RE.nextArticle.test(t) || (RE.refHeading.test(t) && t.length <= 70) || anyAbstractHeading(t) || L[j].h >= big) { break; }
 				if (/^\d{1,4}$/.test(t)) { continue; }
 				body.push(t);
 			}
-			var items = splitReferences(body);
-			if (items.length >= 2) {
-				lists.push({ heading: head.replace(/[:.]\s*$/, ''), latin: RE.refHeadingLatin.test(head), items: items.slice(0, 300) });
+			var checked = checkReferences(splitReferences(body));
+			if (checked.items.length >= 2) {
+				lists.push({ heading: head.replace(/[:.]\s*$/, ''), latin: RE.refHeadingLatin.test(head), items: checked.items.slice(0, 300), rejected: checked.rejected });
 			}
 			i = j - 1;
 		}

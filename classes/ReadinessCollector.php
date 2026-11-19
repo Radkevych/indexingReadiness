@@ -185,11 +185,21 @@ class ReadinessCollector
                 if ($display === '' && !$names) {
                     continue;
                 }
+                $rorNames = [];
+                $rorObject = $affiliation->getRorObject();
+                if ($rorObject) {
+                    foreach ((array) ($rorObject->getName() ?? []) as $locale => $name) {
+                        if (trim((string) $name) !== '') {
+                            $rorNames[$locale] = trim((string) $name);
+                        }
+                    }
+                }
                 $affiliations[] = [
                     'id' => (int) $affiliation->getId(),
                     'name' => $display !== '' ? $display : (string) reset($names),
                     'names' => (object) $names,
                     'ror' => (string) ($affiliation->getRor() ?? ''),
+                    'rorNames' => (object) $rorNames,
                 ];
             }
             $authors[] = [

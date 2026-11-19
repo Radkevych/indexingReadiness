@@ -69,7 +69,7 @@
 		history: null, showHistory: false, historyOpen: {}, historyLimit: 0, confirmRollback: null,
 		deposit: true, confirmAll: false, showAllTop: false,
 		running: '', progress: '', notice: '',
-		filter: 'all', system: 'all', query: '', open: {}
+		filter: 'all', system: 'all', query: '', open: {}, selected: {}, confirmBatch: false
 	};
 
 	var STORAGE_KEY = 'indexingReadiness:' + (cfg.dataUrl || '');
@@ -408,6 +408,22 @@
 					noAff + ' ' + P(noAff, ['автор', 'автори', 'авторів'], ['author', 'authors']) + L(' без афіліації.', ' without affiliation.'),
 					L('Вкажіть місце роботи кожного автора.', 'Enter the affiliation of every author.')));
 			}
+			// ROR, назва якого в реєстрі не відповідає назві установи, введеній для автора.
+			var badRor = [];
+			authors.forEach(function (x) {
+				(x.affiliations || []).forEach(function (af) {
+					var own = keys(af.names).map(function (l) { return af.names[l]; });
+					var reg = keys(af.rorNames || {}).map(function (l) { return af.rorNames[l]; });
+					if (af.ror && own.length && reg.length && !own.some(function (n) { return IR.orgMatches(n, reg); })) {
+						badRor.push(x.name + ': ' + own[0] + ' ≠ ' + reg[0]);
+					}
+				});
+			});
+			if (badRor.length) {
+				out.push(issue('a-ror-mismatch', S('rg cr', 'important'),
+					L('ROR не відповідає назві установи: ', 'The ROR ID does not match the organisation name: ') + badRor.join('; '),
+					L('Поверніть цей запис в «Історії змін» або видаліть ROR у відомостях про автора.', 'Restore this save in the change history or remove the ROR ID from the contributor details.')));
+			}
 			if (noRor) {
 				out.push(issue('a-no-ror', S('rg cr', 'minor'),
 					noRor + ' ' + P(noRor, ['афіліація', 'афіліації', 'афіліацій'], ['affiliation', 'affiliations']) + L(' без ідентифікатора ROR.', ' without a ROR ID.'),
@@ -708,6 +724,7 @@
 			journal: L('налаштування журналу', 'journal settings'),
 			pdf: L('PDF-файл', 'PDF file'),
 			pdfSection: L('PDF-файл, розділ ', 'PDF file, section ') + q(p.heading || ''),
+			crossrefRefs: L('запис статті в Crossref', 'the article record in Crossref'),
 			pdfOrcid: L('PDF-файл, підтверджено профілем ORCID', 'PDF file, confirmed by the ORCID record'),
 			orcid: L('профіль ORCID', 'ORCID record'),
 			ror: L('реєстр ROR', 'ROR registry')
@@ -722,6 +739,25 @@
 			note = p.rorName || '';
 		}
 		return { label: label, source: source, note: note };
+	}
+
+	var crRefCache = {};
+
+	/** Список літератури з запису Crossref (неструктурований текст або складений із полів запису). */
+	function crossrefReferences(doi) {
+		var key = String(doi).toLowerCase();
+		if (!crRefCache[key]) {
+			crRefCache[key] = getJson(crUrl('works/' + encodeURIComponent(key), [])).then(function (j) {
+				var refs = (j && j.message && j.message.reference) || [];
+				return refs.map(function (r) {
+					if (r.unstructured) { return String(r.unstructured).replace(/\s+/g, ' ').trim(); }
+					var parts = [r.author, r.year ? '(' + r.year + ')' : '', r['article-title'] || r['volume-title'], r['journal-title'] || r['series-title'],
+						r.volume, r['first-page'], r.DOI ? 'https://doi.org/' + r.DOI : ''].filter(Boolean);
+					return parts.length >= 3 ? parts.join('. ').replace(/\.\s*\./g, '.') : '';
+				}).filter(Boolean);
+			}).catch(function () { return null; });
+		}
+		return crRefCache[key];
 	}
 
 	async function proposalsFor(a, j) {
@@ -745,13 +781,23 @@
 					list.push(prop('keywords', 'pdf', good ? 'medium' : 'low', { lang: lang, locale: loc, value: got.keywords.join('; '), editable: true }));
 				}
 			});
-			if (!a.referencesCount && parsed.references.length) {
-				var lists = parsed.references;
-				var pick = lists.filter(function (l) { return l.latin; })[0] || lists[0];
-				var suspicious = pick.items.length < 3 || pick.items.some(function (x) { return x.length > 700; });
-				list.push(prop('citationsRaw', 'pdfSection', suspicious ? 'low' : 'medium', {
-					heading: pick.heading, count: pick.items.length, value: pick.items.join('\n'), editable: true,
-					alternatives: lists.map(function (l) { return { heading: l.heading, value: l.items.join('\n'), count: l.items.length }; })
+		}
+
+		// Список літератури: спершу з Crossref (його депонував сам журнал), потім із PDF.
+		if (!a.referencesCount) {
+			var alts = [];
+			var crRefs = a.doi ? await crossrefReferences(a.doi) : null;
+			if (crRefs && crRefs.length >= 2) {
+				alts.push({ heading: 'Crossref', source: 'crossrefRefs', value: crRefs.join('\n'), count: crRefs.length, rejected: [] });
+			}
+			((parsed && parsed.references) || []).slice().sort(function (x, y) { return (y.latin ? 1 : 0) - (x.latin ? 1 : 0); }).forEach(function (l) {
+				alts.push({ heading: l.heading, source: 'pdfSection', value: l.items.join('\n'), count: l.items.length, rejected: l.rejected || [] });
+			});
+			if (alts.length) {
+				var pick = alts[0];
+				var suspicious = pick.source !== 'crossrefRefs' && (pick.count < 3 || pick.value.split('\n').some(function (x) { return x.length > 700; }));
+				list.push(prop('citationsRaw', pick.source, pick.source === 'crossrefRefs' ? 'high' : (suspicious ? 'low' : 'medium'), {
+					heading: pick.heading, count: pick.count, value: pick.value, rejected: pick.rejected, editable: true, alternatives: alts
 				}));
 			}
 		}
@@ -839,13 +885,14 @@
 	function firstValue(o) { var k = keys(o); return k.length ? o[k[0]] : ''; }
 	function firstEnglish(o) { var k = keys(o).filter(isEnglish); return k.length ? o[k[0]] : ''; }
 
-	async function runProposals() {
-		var j = state.data.journal, arts = state.data.articles.filter(function (a) { return !a.loadError; });
+	async function runProposals(onlyIds) {
+		var j = state.data.journal, arts = state.data.articles.filter(function (a) { return !a.loadError && (!onlyIds || onlyIds.indexOf(a.id) !== -1); });
 		var need = {};
 		arts.forEach(function (a) { if (pdfGalley(a) && needsPdf(a, j) && !state.parsed[a.id]) { need[a.id] = true; } });
 		if (keys(need).length) { await runPdf(need); }
-		state.proposals = {};
+		if (!onlyIds) { state.proposals = {}; }
 		for (var i = 0; i < arts.length; i++) {
+			delete state.proposals[arts[i].id];
 			progress(L('Доповнення: ', 'Additions: ') + (i + 1) + L(' з ', ' of ') + arts.length + L(' (PDF, ORCID, ROR)', ' (PDF, ORCID, ROR)'));
 			var list = await proposalsFor(arts[i], j);
 			if (list.length) { state.proposals[arts[i].id] = list; }
@@ -972,6 +1019,8 @@
 			if (kind === 'all' || kind === 'pages') { await runPages(); await checkOai(); }
 			if (kind === 'all' || kind === 'pdf') { await runPdf(); }
 			if (kind === 'proposals') { await runProposals(); }
+			if (kind === 'batch-find') { await runBatch(arg, false); }
+			if (kind === 'batch-auto') { await runBatch(arg, true); }
 			if (kind === 'apply') { await applyFor(arg); }
 			if (kind === 'history') { await loadHistory(); state.showHistory = true; }
 			if (kind === 'rollback') { await rollback(arg); }
@@ -981,6 +1030,7 @@
 			state.running = '';
 			state.progress = '';
 			state.confirmAll = false;
+			state.confirmBatch = false;
 			render();
 		}
 	}
@@ -1069,11 +1119,15 @@
 			} else if (p.editable) {
 				if (p.alternatives && p.alternatives.length > 1) {
 					html += '<div><select data-alt="' + ref + '">' + p.alternatives.map(function (alt, k) {
-						return '<option value="' + k + '"' + (alt.value === p.value ? ' selected' : '') + '>' + esc(alt.heading) + ' (' + alt.count + ')</option>';
+						return '<option value="' + k + '"' + (alt.value === p.value ? ' selected' : '') + '>' + esc(alt.source === 'crossrefRefs' ? 'Crossref' : 'PDF: ' + alt.heading) + ' (' + alt.count + ')</option>';
 					}).join('') + '</select></div>';
 				}
 				var rows = p.type === 'citationsRaw' ? 10 : (p.type === 'abstract' ? 6 : 2);
 				html += '<textarea rows="' + rows + '" data-edit="' + ref + ':value">' + esc(p.value) + '</textarea>';
+				if (p.type === 'citationsRaw' && (p.rejected || []).length) {
+					html += '<details class="ir-rejected"><summary>' + L('Відкинуто фрагментів, не схожих на бібліографічний опис: ', 'Fragments rejected as not looking like a reference: ') + p.rejected.length + '</summary><ul>'
+						+ p.rejected.map(function (x) { return '<li>' + esc(x.length > 300 ? x.slice(0, 300) + '…' : x) + '</li>'; }).join('') + '</ul></details>';
+				}
 			} else {
 				html += '<div class="ir-value">' + esc(p.value) + '</div>';
 			}
@@ -1101,6 +1155,9 @@
 			if (state.filter === 'notready' && sc >= READY) { return false; }
 			if (state.filter === 'ready' && sc < READY) { return false; }
 			if (state.filter === 'proposals' && !(state.proposals[r.a.id] || []).length) { return false; }
+			if (state.filter === 'license' && !r.issues.some(function (i) { return /license/.test(i.id); })) { return false; }
+			if (state.filter === 'norefs' && r.a.referencesCount) { return false; }
+			if (state.filter === 'selected' && !state.selected[r.a.id]) { return false; }
 			if (qs && (r.a.title + ' ' + r.a.doi + ' ' + r.a.issue + ' ' + r.a.id).toLowerCase().indexOf(qs) === -1) { return false; }
 			return true;
 		});
@@ -1253,6 +1310,42 @@
 			+ '</div>';
 	}
 
+	function selectedIds() {
+		return keys(state.selected).filter(function (id) { return state.selected[id]; }).map(function (id) { return parseInt(id, 10); });
+	}
+
+	/** Панель дій для вибраних статей. */
+	function selectionBar(shown) {
+		var ids = selectedIds(), dis = state.running ? ' disabled' : '';
+		var html = '<div class="ir-selbar">';
+		if (!ids.length) {
+			return html + '<span class="rg-muted">' + L('Позначте статті прапорцями, щоб опрацювати лише їх: знайти відсутні дані або знайти й одразу записати.',
+				'Tick articles to process only them: find missing data, or find and save right away.') + '</span></div>';
+		}
+		html += '<strong>' + L('Вибрано: ', 'Selected: ') + ids.length + '</strong> '
+			+ '<button type="button" data-batch="find"' + dis + '>' + L('Знайти дані для вибраних', 'Find data for selected') + '</button> ';
+		if (state.confirmBatch) {
+			html += '<span class="ir-confirm">' + L('Знайти й записати для ' + ids.length + ' ' + P(ids.length, ['статті', 'статей', 'статей'], []) + ' усі значення, крім позначених низькою надійністю?',
+				'Find and save for ' + ids.length + ' ' + P(ids.length, [], ['article', 'articles']) + ' all values except low-reliability ones?') + '</span> '
+				+ '<button type="button" class="rg-danger" data-batch="auto"' + dis + '>' + L('Так, опрацювати', 'Yes, process') + '</button> '
+				+ '<button type="button" data-batch="cancel">' + L('Ні', 'No') + '</button> ';
+		} else {
+			html += '<button type="button" class="rg-primary" data-batch="ask"' + dis + '>' + L('Знайти й записати без перегляду', 'Find and save without review') + '</button> ';
+		}
+		html += '<button type="button" class="rg-link" data-batch="clear">' + L('зняти вибір', 'clear selection') + '</button>'
+			+ '<div class="rg-muted ir-hint">' + L('«Без перегляду» записує лише значення із середньою й високою надійністю і лише в порожні поля; усе потрапляє в історію змін і може бути повернуто.',
+				'“Without review” saves only medium- and high-reliability values and only into empty fields; everything goes to the change history and can be restored.') + '</div>';
+		return html + '</div>';
+	}
+
+	async function runBatch(ids, autoSave) {
+		await runProposals(ids);
+		if (autoSave) {
+			var withProps = ids.filter(function (id) { return (state.proposals[id] || []).some(function (p) { return p.checked; }); });
+			if (withProps.length) { await applyFor(withProps); } else { state.notice = L('Для вибраних статей нових даних не знайдено.', 'No new data found for the selected articles.'); }
+		}
+	}
+
 	function render() {
 		if (!state.data) { return; }
 		SEV = sevInfo();
@@ -1339,7 +1432,8 @@
 				return '<option value="' + s.id + '"' + (state.system === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
 			}).join('') + '</select>'
 			+ '<select data-filter="1">' + [['all', L('Усі статті', 'All articles')], ['critical', L('З критичними проблемами', 'With critical problems')],
-				['notready', L('Не готові (<', 'Not ready (<') + READY + ')'], ['ready', L('Готові (≥', 'Ready (≥') + READY + ')'], ['proposals', L('Зі знайденими даними', 'With found data')]].map(function (o) {
+				['notready', L('Не готові (<', 'Not ready (<') + READY + ')'], ['ready', L('Готові (≥', 'Ready (≥') + READY + ')'], ['license', L('З проблемами ліцензії', 'With licence problems')], ['norefs', L('Без списку літератури', 'Without references')],
+				['proposals', L('Зі знайденими даними', 'With found data')], ['selected', L('Вибрані', 'Selected')]].map(function (o) {
 				return '<option value="' + o[0] + '"' + (state.filter === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
 			}).join('') + '</select>'
 			+ '<input type="search" data-query="1" placeholder="' + esc(L('Пошук за назвою, DOI, випуском', 'Search by title, DOI, issue')) + '" value="' + esc(state.query) + '">'
@@ -1348,14 +1442,17 @@
 		if (!total) {
 			html += '<p class="rg-muted">' + L('У журналі ще немає опублікованих статей.', 'The journal has no published articles yet.') + '</p>';
 		} else {
-			html += '<table class="rg-table rg-articles"><thead><tr><th>' + L('Стаття', 'Article') + '</th><th>DOI</th>'
+			html += selectionBar(shown);
+			var allSel = shown.length && shown.every(function (r) { return state.selected[r.a.id]; });
+			html += '<table class="rg-table rg-articles"><thead><tr><th class="ir-sel"><input type="checkbox" data-select-all="1" title="' + esc(L('Вибрати всі показані', 'Select all shown')) + '"' + (allSel ? ' checked' : '') + '></th><th>' + L('Стаття', 'Article') + '</th><th>DOI</th>'
 				+ SYSTEMS.map(function (s) { return '<th class="rg-num" title="' + esc(s.name) + '">' + s.short + '</th>'; }).join('')
 				+ '<th>' + L('Проблеми', 'Problems') + '</th></tr></thead><tbody>';
 			shown.forEach(function (r) {
 				var a = r.a, open = !!state.open[a.id], nProps = (state.proposals[a.id] || []).length;
 				var c = { critical: 0, important: 0, minor: 0 };
 				r.issues.forEach(function (i) { c[i.sev]++; });
-				html += '<tr><td><a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.title || ('#' + a.id)) + '</a>'
+				html += '<tr' + (state.selected[a.id] ? ' class="ir-row-sel"' : '') + '><td class="ir-sel"><input type="checkbox" data-select="' + a.id + '"' + (state.selected[a.id] ? ' checked' : '') + '></td>'
+					+ '<td><a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.title || ('#' + a.id)) + '</a>'
 					+ '<div class="rg-muted">' + esc(a.issue) + (a.editUrl ? ' · <a href="' + esc(a.editUrl) + '" target="_top">' + L('редагувати', 'edit') + '</a>' : '') + '</div></td>'
 					+ '<td class="rg-doi">' + (a.doi ? '<a href="https://doi.org/' + esc(a.doi) + '" target="_blank" rel="noopener">' + esc(a.doi) + '</a>' : '—') + '</td>'
 					+ SYSTEMS.map(function (s) { return '<td class="rg-num"><span class="rg-score rg-' + levelCls(r.score[s.id]) + '" title="' + esc(s.name + ': ' + levelLabel(r.score[s.id])) + '">' + r.score[s.id] + '</span></td>'; }).join('')
@@ -1365,7 +1462,7 @@
 					+ ((r.issues.length || nProps || state.results[a.id]) ? '<button type="button" class="rg-link" data-toggle="' + a.id + '">' + (open ? L('згорнути', 'collapse') : L('деталі', 'details')) + '</button>' : '')
 					+ '</td></tr>';
 				if (open) {
-					html += '<tr class="rg-details"><td colspan="' + (3 + SYSTEMS.length) + '">' + (r.issues.length ? issueList(r.issues) : '') + proposalBlock(a) + '</td></tr>';
+					html += '<tr class="rg-details"><td></td><td colspan="' + (3 + SYSTEMS.length) + '">' + (r.issues.length ? issueList(r.issues) : '') + proposalBlock(a) + '</td></tr>';
 				}
 			});
 			html += '</tbody></table>';
@@ -1401,6 +1498,20 @@
 			again.focus();
 			try { again.setSelectionRange(pos, pos); } catch (e) { /* не підтримується */ }
 		});
+		on('[data-select]', 'change', function (cb) { state.selected[cb.getAttribute('data-select')] = cb.checked; state.confirmBatch = false; render(); });
+		on('[data-select-all]', 'change', function (cb) {
+			filterRows(rows).forEach(function (r) { state.selected[r.a.id] = cb.checked; });
+			state.confirmBatch = false;
+			render();
+		});
+		on('[data-batch]', 'click', function (b) {
+			var v = b.getAttribute('data-batch'), ids = selectedIds();
+			if (v === 'clear') { state.selected = {}; state.confirmBatch = false; render(); }
+			else if (v === 'ask') { state.confirmBatch = true; render(); }
+			else if (v === 'cancel') { state.confirmBatch = false; render(); }
+			else if (v === 'find') { run('batch-find', ids); }
+			else if (v === 'auto') { run('batch-auto', ids); }
+		});
 		on('[data-top-toggle]', 'click', function () { state.showAllTop = !state.showAllTop; render(); });
 		on('button[data-toggle]', 'click', function (b) { var id = b.getAttribute('data-toggle'); state.open[id] = !state.open[id]; render(); });
 		on('[data-prop]', 'change', function (cb) { var r = propRef(cb.getAttribute('data-prop')); state.proposals[r.a][r.i].checked = cb.checked; render(); });
@@ -1408,7 +1519,7 @@
 		on('[data-edit-name]', 'input', function (el) { var r = propRef(el.getAttribute('data-edit-name')); state.proposals[r.a][r.i].names[r.field] = el.value; });
 		on('[data-alt]', 'change', function (s) {
 			var r = propRef(s.getAttribute('data-alt')), p = state.proposals[r.a][r.i], alt = p.alternatives[parseInt(s.value, 10)];
-			p.value = alt.value; p.heading = alt.heading; p.count = alt.count;
+			p.value = alt.value; p.heading = alt.heading; p.count = alt.count; p.source = alt.source; p.rejected = alt.rejected || [];
 			render();
 		});
 		on('[data-deposit]', 'change', function (cb) { state.deposit = cb.checked; render(); });
