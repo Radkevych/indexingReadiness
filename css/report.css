@@ -1,0 +1,565 @@
+/* plugins/generic/rgReadiness/css/report.css — стилі звіту, наближені до інтерфейсу OJS 3.5 */
+
+html, body {
+	margin: 0;
+	padding: 0;
+	background: transparent;
+}
+
+body {
+	font-family: "Noto Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+	font-size: 14px;
+	line-height: 1.5;
+	color: #222;
+}
+
+.rg {
+	padding: 4px 2px 8px;
+}
+
+.rg h2 {
+	margin: 0 0 2px;
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.rg h3 {
+	margin: 0 0 10px;
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.rg a {
+	color: #006798;
+}
+
+.rg-muted {
+	color: #6b6b6b;
+	font-size: 13px;
+	margin: 0;
+}
+
+.rg-head {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: 12px;
+}
+
+.rg-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.rg button {
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	padding: 6px 12px;
+	border: 1px solid #c6c6c6;
+	border-radius: 3px;
+	background: #fff;
+	color: #006798;
+	cursor: pointer;
+}
+
+.rg button:hover:not([disabled]) {
+	border-color: #006798;
+}
+
+.rg button[disabled] {
+	opacity: .5;
+	cursor: default;
+}
+
+.rg button.rg-primary {
+	background: #006798;
+	border-color: #006798;
+	color: #fff;
+}
+
+.rg button.rg-link {
+	border: 0;
+	padding: 0 4px;
+	background: none;
+	font-weight: 400;
+	text-decoration: underline;
+}
+
+.rg-note {
+	margin: 0 0 14px;
+	padding: 10px 12px;
+	background: #f3f7fa;
+	border-left: 3px solid #006798;
+	font-size: 13px;
+}
+
+.rg-progress {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 12px;
+	padding: 8px 12px;
+	background: #fff8e1;
+	border: 1px solid #f0d78c;
+	border-radius: 3px;
+}
+
+.rg-spinner {
+	width: 14px;
+	height: 14px;
+	border: 2px solid #c9a227;
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: rg-spin .8s linear infinite;
+}
+
+@keyframes rg-spin {
+	to { transform: rotate(360deg); }
+}
+
+.rg-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 10px;
+	margin-bottom: 18px;
+}
+
+.rg-card {
+	padding: 12px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background: #fff;
+}
+
+.rg-card-value {
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.rg-card-label {
+	font-size: 12px;
+	color: #6b6b6b;
+}
+
+.rg-card-ok { border-top: 3px solid #00b24e; }
+.rg-card-mid { border-top: 3px solid #e08914; }
+.rg-card-bad { border-top: 3px solid #d00a0a; }
+
+.rg-section {
+	margin-bottom: 22px;
+}
+
+.rg-table {
+	width: 100%;
+	border-collapse: collapse;
+	background: #fff;
+	border: 1px solid #ddd;
+}
+
+.rg-table th,
+.rg-table td {
+	padding: 8px 10px;
+	border-bottom: 1px solid #eee;
+	text-align: left;
+	vertical-align: top;
+}
+
+.rg-table th {
+	background: #f7f7f7;
+	font-size: 12px;
+	font-weight: 700;
+	color: #444;
+}
+
+.rg-num {
+	text-align: right !important;
+	white-space: nowrap;
+	width: 1%;
+}
+
+.rg-doi {
+	font-size: 12px;
+	word-break: break-all;
+	max-width: 220px;
+}
+
+.rg-details td {
+	background: #fafafa;
+}
+
+.rg-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.rg-filters select,
+.rg-filters input {
+	font: inherit;
+	font-size: 13px;
+	padding: 5px 8px;
+	border: 1px solid #c6c6c6;
+	border-radius: 3px;
+	background: #fff;
+}
+
+.rg-filters input {
+	min-width: 260px;
+}
+
+.rg-badge {
+	display: inline-block;
+	padding: 1px 6px;
+	border-radius: 3px;
+	font-size: 11px;
+	font-weight: 700;
+	white-space: nowrap;
+	color: #fff;
+}
+
+.rg-crit { background: #d00a0a; }
+.rg-imp { background: #e08914; }
+.rg-min { background: #7a8a99; }
+
+.rg-score {
+	display: inline-block;
+	min-width: 34px;
+	padding: 2px 6px;
+	border-radius: 12px;
+	font-weight: 700;
+	text-align: center;
+	color: #fff;
+}
+
+.rg-score.rg-ok { background: #00b24e; }
+.rg-score.rg-mid { background: #e08914; }
+.rg-score.rg-bad { background: #d00a0a; }
+
+.rg-issues {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.rg-issues li {
+	padding: 6px 0;
+	border-bottom: 1px dashed #e3e3e3;
+}
+
+.rg-issues li:last-child {
+	border-bottom: 0;
+}
+
+.rg-fix {
+	margin: 2px 0 0;
+	color: #444;
+	font-size: 13px;
+}
+
+.rg-okline {
+	color: #00873b;
+	font-weight: 600;
+}
+
+.rg-error {
+	color: #d00a0a;
+	font-weight: 600;
+}
+
+/* --- Версія 2: системи індексування, доповнення метаданих --- */
+
+.ir-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 24px;
+	margin: 0 0 12px;
+}
+
+.ir-group {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.ir-group-label {
+	font-size: 12px;
+	font-weight: 700;
+	color: #6b6b6b;
+	margin-right: 2px;
+}
+
+.rg button.rg-danger {
+	background: #d00a0a;
+	border-color: #d00a0a;
+	color: #fff;
+}
+
+.ir-notice {
+	border-left-color: #00b24e;
+	background: #effaf3;
+}
+
+.ir-chips {
+	display: inline-flex;
+	gap: 3px;
+	vertical-align: middle;
+}
+
+.ir-chip {
+	display: inline-block;
+	padding: 0 5px;
+	border-radius: 3px;
+	border: 1px solid #c6c6c6;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 16px;
+	color: #444;
+	background: #fff;
+	white-space: nowrap;
+}
+
+.ir-chip-crit { border-color: #d00a0a; color: #d00a0a; }
+.ir-chip-imp { border-color: #e08914; color: #a85f00; }
+.ir-chip-min { border-color: #9aa7b3; color: #5d6b78; }
+.ir-chip-prop { border-color: #006798; color: #006798; }
+
+.ir-props {
+	margin-top: 10px;
+	padding: 10px 12px;
+	border: 1px solid #b9d3e3;
+	border-radius: 4px;
+	background: #f6fafc;
+}
+
+.ir-props h4 {
+	margin: 0 0 8px;
+	font-size: 14px;
+}
+
+.ir-prop {
+	padding: 8px 0;
+	border-bottom: 1px dashed #d7e3ea;
+}
+
+.ir-prop:last-of-type {
+	border-bottom: 0;
+	margin-bottom: 8px;
+}
+
+.ir-prop-off {
+	opacity: .6;
+}
+
+.ir-prop textarea,
+.ir-prop input[type="text"],
+.ir-prop select {
+	font: inherit;
+	font-size: 13px;
+	width: 100%;
+	box-sizing: border-box;
+	margin-top: 4px;
+	padding: 5px 7px;
+	border: 1px solid #c6c6c6;
+	border-radius: 3px;
+	background: #fff;
+}
+
+.ir-name {
+	display: flex;
+	gap: 6px;
+}
+
+.ir-value {
+	margin-top: 4px;
+	font-size: 13px;
+	word-break: break-all;
+}
+
+.ir-apply {
+	padding: 12px 14px;
+	border: 1px solid #b9d3e3;
+	border-radius: 4px;
+	background: #f6fafc;
+}
+
+.ir-check {
+	display: inline-block;
+	margin: 6px 12px 6px 0;
+}
+
+/* --- Версія 2.1: мова інтерфейсу, розгортання списку, підказка депонування --- */
+
+.ir-lang {
+	display: inline-flex;
+	border: 1px solid #c6c6c6;
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.rg .ir-lang button {
+	border: 0;
+	border-radius: 0;
+	padding: 4px 10px;
+	font-weight: 400;
+	color: #444;
+}
+
+.rg .ir-lang button.ir-lang-on {
+	background: #006798;
+	color: #fff;
+	font-weight: 600;
+}
+
+.rg button.ir-more {
+	margin-top: 6px;
+	border: 0;
+	background: none;
+	padding: 4px 0;
+	color: #006798;
+	font-weight: 600;
+}
+
+.rg button.ir-more:hover {
+	text-decoration: underline;
+}
+
+.ir-hint {
+	margin: 0 0 8px;
+	max-width: 900px;
+}
+
+.ir-apply-row {
+	margin-top: 4px;
+}
+
+/* --- Версія 2.2: кроки роботи, історія змін --- */
+
+.ir-head-right {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.ir-steps {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 10px;
+	margin: 0 0 14px;
+}
+
+.ir-step {
+	display: flex;
+	gap: 10px;
+	padding: 12px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background: #fff;
+}
+
+.ir-step-done {
+	border-color: #9fd7b5;
+	background: #f6fcf8;
+}
+
+.ir-step-n {
+	flex: 0 0 26px;
+	height: 26px;
+	border-radius: 50%;
+	background: #006798;
+	color: #fff;
+	font-weight: 700;
+	text-align: center;
+	line-height: 26px;
+}
+
+.ir-step-done .ir-step-n {
+	background: #00b24e;
+}
+
+.ir-step-body .rg-muted {
+	margin: 2px 0 8px;
+}
+
+.ir-step-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.ir-more-checks summary {
+	cursor: pointer;
+	color: #006798;
+	font-size: 13px;
+}
+
+.ir-more-checks[open] {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	width: 100%;
+}
+
+.ir-history {
+	padding: 12px 14px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background: #fff;
+}
+
+.ir-hentry {
+	padding: 10px 0;
+	border-top: 1px solid #eee;
+}
+
+.ir-hentry-off {
+	opacity: .65;
+}
+
+.ir-hhead {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.ir-hactions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.ir-status {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 10px;
+	background: #e3f6eb;
+	color: #00873b;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.ir-status-off {
+	background: #eee;
+	color: #666;
+}
+
+.ir-htable {
+	margin-top: 8px;
+}
+
+.ir-loc {
+	flex: 0 0 34px;
+	align-self: center;
+	font-size: 12px;
+	color: #6b6b6b;
+}

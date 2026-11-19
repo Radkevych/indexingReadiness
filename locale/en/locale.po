@@ -1,0 +1,56 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+msgid "plugins.generic.indexingReadiness.name"
+msgstr "Indexing Readiness"
+
+msgid "plugins.generic.indexingReadiness.description"
+msgstr "Adds a tab to Settings > Distribution that audits all published articles separately for Google Scholar, ResearchGate, Crossref-based aggregators (OpenAlex, Semantic Scholar, Dimensions) and OAI-PMH harvesters (BASE, OpenAIRE, DOAJ). For empty metadata fields it finds values printed in the article PDF (abstracts, keywords, references, pages, ORCID, email, affiliation) or recorded in the ORCID and ROR registries, and saves them only after editor confirmation, with a change history and restore."
+
+msgid "plugins.generic.indexingReadiness.tab"
+msgstr "Indexing readiness"
+
+msgid "plugins.generic.indexingReadiness.loading"
+msgstr "Loading article data…"
+
+msgid "plugins.generic.indexingReadiness.skip.filled"
+msgstr "the field is already filled; the existing value is kept"
+
+msgid "plugins.generic.indexingReadiness.skip.empty"
+msgstr "empty value"
+
+msgid "plugins.generic.indexingReadiness.skip.invalid"
+msgstr "invalid value"
+
+msgid "plugins.generic.indexingReadiness.skip.notFound"
+msgstr "author or affiliation not found"
+
+msgid "plugins.generic.indexingReadiness.skip.rorNotLocal"
+msgstr "this ROR ID is not in the local ROR registry of your OJS"
+
+msgid "plugins.generic.indexingReadiness.skip.unknown"
+msgstr "unknown operation"
+
+msgid "plugins.generic.indexingReadiness.skip.locale"
+msgstr "the language \"{$locale}\" is not enabled for journal metadata"
+
+msgid "plugins.generic.indexingReadiness.error.logEntryNotFound"
+msgstr "Change log entry not found."
+
+msgid "plugins.generic.indexingReadiness.error.alreadyRolledBack"
+msgstr "These changes have already been rolled back."
+
+msgid "plugins.generic.indexingReadiness.error.notFound"
+msgstr "Published article not found."
+
+msgid "plugins.generic.indexingReadiness.error.server"
+msgstr "Server error: {$message}"
+
+msgid "plugins.generic.indexingReadiness.error.csrf"
+msgstr "Invalid security token. Reload the page."

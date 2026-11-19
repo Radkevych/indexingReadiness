@@ -1,0 +1,57 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Language: uk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
+
+msgid "plugins.generic.indexingReadiness.name"
+msgstr "Готовність до індексування"
+
+msgid "plugins.generic.indexingReadiness.description"
+msgstr "Додає до розділу «Налаштування → Розповсюдження» вкладку з аналізом усіх опублікованих статей окремо для Google Scholar, ResearchGate, агрегаторів на основі Crossref (OpenAlex, Semantic Scholar, Dimensions) і систем OAI-PMH (BASE, OpenAIRE, DOAJ). Знаходить для порожніх полів метаданих значення, надруковані в PDF статті (анотації, ключові слова, список літератури, сторінки, ORCID, email, місце роботи) або наявні в реєстрах ORCID і ROR, і записує їх лише після підтвердження редактора, з історією змін і поверненням попереднього стану."
+
+msgid "plugins.generic.indexingReadiness.tab"
+msgstr "Готовність до індексування"
+
+msgid "plugins.generic.indexingReadiness.loading"
+msgstr "Завантаження даних про статті…"
+
+msgid "plugins.generic.indexingReadiness.skip.filled"
+msgstr "поле вже заповнено, наявне значення не змінюється"
+
+msgid "plugins.generic.indexingReadiness.skip.empty"
+msgstr "порожнє значення"
+
+msgid "plugins.generic.indexingReadiness.skip.invalid"
+msgstr "некоректне значення"
+
+msgid "plugins.generic.indexingReadiness.skip.notFound"
+msgstr "автора чи афіліацію не знайдено"
+
+msgid "plugins.generic.indexingReadiness.skip.rorNotLocal"
+msgstr "цього ROR немає в локальному реєстрі ROR вашої OJS"
+
+msgid "plugins.generic.indexingReadiness.skip.unknown"
+msgstr "невідома операція"
+
+msgid "plugins.generic.indexingReadiness.skip.locale"
+msgstr "мову «{$locale}» не ввімкнено для метаданих журналу"
+
+msgid "plugins.generic.indexingReadiness.error.logEntryNotFound"
+msgstr "Запис журналу змін не знайдено."
+
+msgid "plugins.generic.indexingReadiness.error.alreadyRolledBack"
+msgstr "Ці зміни вже скасовано."
+
+msgid "plugins.generic.indexingReadiness.error.notFound"
+msgstr "Опубліковану статтю не знайдено."
+
+msgid "plugins.generic.indexingReadiness.error.server"
+msgstr "Помилка сервера: {$message}"
+
+msgid "plugins.generic.indexingReadiness.error.csrf"
+msgstr "Недійсний токен безпеки. Оновіть сторінку."
